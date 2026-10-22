@@ -1,23 +1,23 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { clearSession, useUser } from '../lib/session';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = useUser();
 
   function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearSession();
     navigate('/login');
   }
 
   return (
     <nav className="sticky top-0 z-50 glass">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4">
         <Link to="/" className="text-2xl font-extrabold gradient-text">
           ✨ Seatbook
         </Link>
-        <div className="flex items-center gap-8">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-8">
           <Link
             to="/"
             className={`text-sm font-medium transition-all duration-300 hover:text-[#a855f7] ${
@@ -26,7 +26,7 @@ export default function Navbar() {
           >
             🎉 Events
           </Link>
-          {user && (
+          {user?.role === 'ATTENDEE' && (
             <Link
               to="/my-bookings"
               className={`text-sm font-medium transition-all duration-300 hover:text-[#a855f7] ${

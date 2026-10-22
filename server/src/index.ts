@@ -1,24 +1,33 @@
-import express from 'express';
-import cors from 'cors';
-import authRoutes from './routes/auth';
-import eventRoutes from './routes/events';
-import bookingRoutes from './routes/bookings';
+import { config } from './config';
+import { createApp } from './app';
+import prisma from './db';
+import { expireStaleHolds } from './services/bookingService';
 
-const app = express();
+const app = createApp();
 
-app.use(cors());
-app.use(express.json());
-
-app.get('/health', (req, res) => {
-  res.json({ ok: true });
+const server = app.listen(config.port, () => {
+  console.log(`Seatbook API running on http://localhost:${config.port}`);
 });
 
-app.use('/auth', authRoutes);
-app.use('/events', eventRoutes);
-app.use('/bookings', bookingRoutes);
+// Correctness doesn't depend on this: every read treats a hold past its
+// expiresAt as free, and every write expires stale holds on the seat first.
+// The sweep just keeps statuses in the table honest for reporting.
+const sweep = setInterval(() => {
+  expireStaleHolds().catch((err) => console.error('[holds] sweep failed', err));
+}, 60_000);
+sweep.unref();
 
-const PORT = process.env.PORT || 4000;
+let shuttingDown = false;
+function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received, shutting down`);
+  clearInterval(sweep);
+  server.close(() => {
+    prisma.$disconnect().finally(() => process.exit(0));
+  });
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
 
-app.listen(PORT, () => {
-  console.log(`Seatbook API running on http://localhost:${PORT}`);
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

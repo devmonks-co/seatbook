@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import { api } from '../lib/api';
+import type { EventSummary } from '../lib/types';
+import { formatDateTime } from '../lib/format';
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<EventSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [totalSeatsLeft, setTotalSeatsLeft] = useState(0);
-  const [filtered, setFiltered] = useState<any[]>([]);
+  const [filtered, setFiltered] = useState<EventSummary[]>([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/events`)
-      .then((res) => res.json())
+    api<EventSummary[]>('/events', { auth: false })
       .then((data) => {
         setEvents(data);
         setFiltered(data);
@@ -48,7 +48,8 @@ export default function EventsPage() {
     );
   }
 
-  const featured = filtered[0];
+  const now = Date.now();
+  const featured = filtered.find((e) => new Date(e.startsAt).getTime() > now);
 
   return (
     <div>
@@ -56,13 +57,13 @@ export default function EventsPage() {
         <span className="px-4 py-1 rounded-full bg-[#a855f7]/20 text-[#d8b4fe] text-sm font-medium">
           🚀 The future of seat booking
         </span>
-        <h1 className="mt-6 text-6xl font-extrabold leading-tight">
+        <h1 className="mt-6 text-4xl sm:text-6xl font-extrabold leading-tight">
           Discover <span className="gradient-text">Amazing</span> Events
         </h1>
         <p className="mt-4 text-xl text-white/60 max-w-2xl mx-auto">
           Book your perfect seat in seconds. Seamless, effortless, and powered by cutting-edge technology. 🎉
         </p>
-        <div className="mt-10 flex justify-center gap-6">
+        <div className="mt-10 flex flex-wrap justify-center gap-6">
           <div className="glass rounded-2xl px-8 py-5">
             <div className="text-3xl font-bold gradient-text">{events.length}</div>
             <div className="text-white/50 text-sm">Events</div>
@@ -70,10 +71,6 @@ export default function EventsPage() {
           <div className="glass rounded-2xl px-8 py-5">
             <div className="text-3xl font-bold gradient-text">{totalSeatsLeft}</div>
             <div className="text-white/50 text-sm">Seats Available</div>
-          </div>
-          <div className="glass rounded-2xl px-8 py-5">
-            <div className="text-3xl font-bold gradient-text">100%</div>
-            <div className="text-white/50 text-sm">Satisfaction</div>
           </div>
         </div>
         <input
@@ -90,17 +87,13 @@ export default function EventsPage() {
 
       {featured && (
         <Link to={`/events/${featured.id}`}>
-          <div className="mb-12 p-10 rounded-3xl bg-gradient-to-br from-[#a855f7]/30 via-[#ec4899]/20 to-[#f97316]/20 border border-white/10 hover:scale-[1.01] transition-all duration-500 glow">
+          <div className="mb-12 p-6 sm:p-10 rounded-3xl bg-gradient-to-br from-[#a855f7]/30 via-[#ec4899]/20 to-[#f97316]/20 border border-white/10 hover:scale-[1.01] transition-all duration-500 glow">
             <span className="px-3 py-1 rounded-full bg-[#f97316] text-xs font-bold">🔥 FEATURED</span>
-            <h2 className="mt-4 text-4xl font-bold">{featured.title}</h2>
+            <h2 className="mt-4 text-3xl sm:text-4xl font-bold break-words">{featured.title}</h2>
             <p className="mt-2 text-white/60">📍 {featured.venue}</p>
             <p className="text-white/60">
               📅{' '}
-              {new Date(featured.startsAt).toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
+              {formatDateTime(featured.startsAt)}
             </p>
             <div className="mt-6 flex items-center gap-4">
               <span className="text-3xl font-extrabold gradient-text">{featured.price}</span>
@@ -115,7 +108,7 @@ export default function EventsPage() {
       <h2 className="text-3xl font-bold mb-6">
         All <span className="gradient-text">Events</span> 🎊
       </h2>
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((event) => (
           <Link to={`/events/${event.id}`} key={event.id}>
             <div className="glass rounded-3xl p-6 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 h-full">
@@ -126,17 +119,17 @@ export default function EventsPage() {
               <p className="mt-1 text-white/50 text-sm">📍 {event.venue}</p>
               <p className="text-white/50 text-sm">
                 📅{' '}
-                {new Date(event.startsAt).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {formatDateTime(event.startsAt)}
               </p>
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-2xl font-extrabold gradient-text">{event.price}</span>
-                <span className="px-3 py-1 rounded-full bg-[#22c55e]/20 text-[#86efac] text-sm">
-                  {event.seatsLeft} seats left
-                </span>
+                {new Date(event.startsAt).getTime() <= now ? (
+                  <span className="px-3 py-1 rounded-full bg-white/10 text-white/50 text-sm">Ended</span>
+                ) : (
+                  <span className="px-3 py-1 rounded-full bg-[#22c55e]/20 text-[#86efac] text-sm">
+                    {event.seatsLeft > 0 ? `${event.seatsLeft} seats left` : 'Sold out'}
+                  </span>
+                )}
               </div>
             </div>
           </Link>

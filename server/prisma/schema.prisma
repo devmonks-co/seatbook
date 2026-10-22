@@ -14,8 +14,11 @@ enum Role {
 }
 
 enum BookingStatus {
+  HELD // seat reserved until expiresAt; becomes CONFIRMED, RELEASED or EXPIRED
   CONFIRMED
-  CANCELLED
+  CANCELLED // a confirmed booking the attendee cancelled
+  RELEASED // a hold the attendee gave up before it expired
+  EXPIRED // a hold that ran out
 }
 
 model User {
@@ -56,6 +59,11 @@ model Seat {
   @@unique([eventId, row, col])
 }
 
+// At most one HELD or CONFIRMED booking per seat is enforced by the partial
+// unique index "Booking_seat_active_key" (see migration 20261022000100). Prisma
+// can't express partial indexes, so if `prisma migrate dev` ever generates a
+// DROP INDEX for it, delete that line from the generated migration.
+
 model Booking {
   id          Int           @id @default(autoincrement())
   seatId      Int
@@ -64,5 +72,11 @@ model Booking {
   user        User          @relation(fields: [userId], references: [id])
   status      BookingStatus @default(CONFIRMED)
   createdAt   DateTime      @default(now())
+  expiresAt   DateTime? // only for holds
+  confirmedAt DateTime?
   cancelledAt DateTime?
+  releasedAt  DateTime?
+
+  @@index([userId, status])
+  @@index([seatId, status])
 }

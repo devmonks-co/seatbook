@@ -10,13 +10,17 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main className="max-w-6xl mx-auto px-6 py-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
         <Routes>
           <Route path="/" element={<EventsPage />} />
           <Route path="/events/new" element={<CreateEventPage />} />
           <Route path="/events/:id" element={<EventDetailPage />} />
           <Route path="/my-bookings" element={<MyBookingsPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="*"
+            element={<p className="text-center py-24 text-white/60">Page not found</p>}
+          />
         </Routes>
       </main>
       <footer className="text-center text-white/40 text-sm py-10">

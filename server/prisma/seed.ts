@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { seatLabel } from '../src/utils/helpers';
@@ -22,6 +23,12 @@ function daysFromNow(days: number) {
 }
 
 async function main() {
+  // These are demo accounts with a published password.
+  if (process.env.NODE_ENV === 'production') {
+    console.log('NODE_ENV=production, not seeding demo data');
+    return;
+  }
+
   const existing = await prisma.user.count();
   if (existing > 0) {
     console.log('Database already seeded, skipping');
